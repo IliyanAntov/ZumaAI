@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>3</ID>
+      <Description>"Score"</Description>
+      <VariableType>4 Bytes</VariableType>
+      <Address>"game.exe"+00133DA0</Address>
+      <Offsets>
+        <Offset>60</Offset>
+        <Offset>C0</Offset>
+        <Offset>24</Offset>
+        <Offset>34</Offset>
+        <Offset>14</Offset>
+        <Offset>0</Offset>
+        <Offset>4</Offset>
+      </Offsets>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>20</ID>
+      <Description>"Progress"</Description>
+      <VariableType>4 Bytes</VariableType>
+      <Address>"game.exe"+0017FF54</Address>
+      <Offsets>
+        <Offset>140</Offset>
+        <Offset>48</Offset>
+        <Offset>58</Offset>
+        <Offset>8</Offset>
+        <Offset>C0</Offset>
+        <Offset>58</Offset>
+      </Offsets>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>
