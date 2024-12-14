@@ -1,27 +1,17 @@
 # hyperparameters
+import tqdm
+import rich
 import gymnasium as gym
-import stable_baselines3
-from gymnasium.wrappers import FlattenObservation
-from pynput.keyboard import Listener
-from skimage.feature import learn_gmm
 from stable_baselines3 import DDPG, A2C, SAC, DQN, PPO
+from stable_baselines3.common.callbacks import CheckpointCallback, BaseCallback
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.policies import ActorCriticCnnPolicy
-from stable_baselines3.common.vec_env import VecFrameStack
-from stable_baselines3.sac import MlpPolicy, CnnPolicy
-from tqdm import tqdm
+from stable_baselines3.common.vec_env import VecFrameStack, StackedObservations, VecMonitor, DummyVecEnv
+from stable_baselines3.common.callbacks import ProgressBarCallback
 
-from ZumaInterface.ZumaAgent import ZumaAgent
+# from stable_baselines3.sac import CnnPolicy
+from stable_baselines3.ppo import CnnPolicy
+
 from ZumaInterface.envs.ZumaEnv import ZumaEnv
-from stable_baselines3.common.env_checker import check_env
-import time
-
-
-learning_rate = 0.01
-n_episodes = 100
-start_epsilon = 1.0
-epsilon_decay = start_epsilon / (n_episodes / 2)  # reduce the exploration over time
-final_epsilon = 0.1
 
 gym.envs.register(
     id="ZumaInterface/ZumaEnv-v0",
@@ -29,7 +19,6 @@ gym.envs.register(
 )
 
 # env = gym.make("ZumaInterface/ZumaEnv-v0")
-
 
 
 # agent = ZumaAgent(
@@ -40,34 +29,71 @@ gym.envs.register(
 #     final_epsilon=final_epsilon,
 # )
 
-
-canceled = False
-
-
-def on_press(key):
-    try:
-        if key.char == "q":
-            global canceled
-            canceled = True
-    except AttributeError:
-        pass
-
-
 if __name__ == "__main__":
-    env_vec = make_vec_env("ZumaInterface/ZumaEnv-v0")
+    env_vec = make_vec_env("ZumaInterface/ZumaEnv-v0",
+                       monitor_dir="./logs/",
+                       seed=80085)
+    # env = ResizeObservation(env, (100, 100))
     env_stacked = VecFrameStack(env_vec, 4)
-    model = PPO("CnnPolicy", env_stacked, verbose=1, policy_kwargs=dict(normalize_images=True))
-    model.learn(total_timesteps=1000, log_interval=10)
+    print(env_stacked.observation_space)
+    # check_env(env)
+    checkpoint_callback = CheckpointCallback(save_freq=10_000,
+                                             save_path='./model_checkpoints/')
+
+    # model = SAC(CnnPolicy,
+    #             env_stacked,
+    #             learning_rate=3e-4,
+    #             learning_starts=10,
+    #             train_freq=1,
+    #             gamma=0.99,
+    #             buffer_size=500_000,
+    #             batch_size=256,
+    #             verbose=1,
+    #             tensorboard_log="./tensorboard_logs/",
+    #             device="cpu"
+    #             )
+
+    model = PPO(CnnPolicy,
+                env_stacked,
+                n_steps=128,
+                n_epochs=4,
+                batch_size=128,
+                learning_rate=0.00025,
+                clip_range=0.1,
+                vf_coef=0.5,
+                ent_coef=0.01,
+                verbose=1,
+                tensorboard_log="./tensorboard_logs/",
+                device="cpu",
+
+                )
+
+    model.learn(total_timesteps=1_000_000,
+                log_interval=1,
+                callback=[checkpoint_callback],
+                )
+
+    model.save("./models/model")
+
+    # NOTE: Load trained model
+    # model = SAC.load("./models/model")
+    # obs = env.reset()
+    # for i in range(1000):
+    #     action, _states = model.predict(obs)
+    #     obs, rewards, dones, info = env.step(action)
 
 
     # NOTE: Env test
     # env = ZumaEnv()
     # obs, info = env.reset()
     # n_steps = 10
-    # for _ in range(n_steps):
+    # for i in range(n_steps):
     #     # Random action
     #     action = env.action_space.sample()
     #     obs, reward, terminated, truncated, info = env.step(action)
+    #     img = env.render()
+    #     img.save(str(i) + ".png")
+    #     # print()
     #     if terminated:
     #         obs, info = env.reset()
 
