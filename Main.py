@@ -31,8 +31,7 @@ gym.envs.register(
 
 if __name__ == "__main__":
     env_vec = make_vec_env("ZumaInterface/ZumaEnv-v0",
-                       monitor_dir="./logs/",
-                       seed=80085)
+                           seed=80085)
     # env = ResizeObservation(env, (100, 100))
     env_stacked = VecFrameStack(env_vec, 4)
     print(env_stacked.observation_space)
