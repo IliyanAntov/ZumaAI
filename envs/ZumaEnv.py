@@ -1,5 +1,7 @@
 import threading
 from typing import Optional
+
+import cv2
 import numpy as np
 import gymnasium as gym
 import time
@@ -7,6 +9,7 @@ import time
 import pyautogui
 import win32gui
 
+from ZumaInterface.ImageProcessing import ImageProcessing
 from ZumaInterface.StateReader import StateReader
 
 
@@ -19,24 +22,25 @@ class ZumaEnv(gym.Env):
 
         self.state_reader = StateReader(env_index=env_index)
 
-        self.step_delay_s = 0.04
+        self.step_delay_s = 0.3
         self.max_delay_ms = 1000
         self.max_delay_rollback = 1500
         self.playable = True
-        self.reset_delay = 2.5
+        self.reset_delay = 3
         self.reset_delay_start = 0
 
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`-1}^2
-        self.observation_space = gym.spaces.Box(0, 255, shape=(40, 40, 3), dtype=np.uint8)
+        self.observation_space = gym.spaces.Box(0, 255, shape=(80, 112, 3), dtype=np.uint8)
 
-        self.action_space = gym.spaces.Box(low=np.array([-1.0]), high=np.array([1.0]), dtype=np.float64)
+        self.action_space = gym.spaces.Box(low=-1.0, high=1.0, dtype=np.float32)
 
     def _get_obs(self):
         # self.state_reader.stack_frames(False)
         img = self.state_reader.screenshot_process()
-        img_arr = np.array(img)
-        return img_arr
+        img = ImageProcessing.prepare_image(img)
+        # img_arr = np.array(img)
+        return img
 
     def _get_info(self):
         self.state_reader.read_game_values()
@@ -79,7 +83,7 @@ class ZumaEnv(gym.Env):
 
         old_score = self.state_reader.score
 
-        reward = 0
+        reward = -0.01
         terminated = False
         if time.time() - self.reset_delay_start > self.reset_delay:
             self.playable = True
@@ -87,8 +91,7 @@ class ZumaEnv(gym.Env):
         if self.playable:
             self.state_reader.shoot_ball(angle)
             time.sleep(self.step_delay_s/2)
-            # TODO
-            # self.state_reader.reset_rotation()
+            self.state_reader.reset_rotation()
             time.sleep(self.step_delay_s/2)
 
             self.state_reader.read_game_values()
@@ -100,17 +103,17 @@ class ZumaEnv(gym.Env):
                 self.state_reader.write_game_values()
                 self.playable = False
                 self.reset_delay_start = time.time()
+                reward = -1
+            else:
+                new_score = self.state_reader.score
+                score_change = new_score - old_score
+                # if score_change > 0:
+                #     reward = 1
+                if score_change > 100:
+                    reward = 1
+                elif score_change > 0:
+                    reward = 0.5
 
-            new_score = self.state_reader.score
-            score_change = new_score - old_score
-            if score_change > 100:
-                reward = 1
-            elif score_change > 0:
-                reward = 0.5
-            # elif terminated:
-            #     reward = -1
-            # else:
-            #     reward = -0.01
         else:
             self.state_reader.shoot_ball(180)
             time.sleep(self.step_delay_s)
@@ -124,6 +127,8 @@ class ZumaEnv(gym.Env):
     def render(self, mode="rgb_array"):
         if mode == "rgb_array":
             img = self.state_reader.screenshot_process()
+            img = ImageProcessing.prepare_image(img)
+
             return img
 
     # NOTE: old

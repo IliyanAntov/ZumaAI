@@ -93,9 +93,30 @@ class StateReader:
         lives_offsets = [0x60, 0x88, 0x8, 0x98, 0x48, 0xC0]
         self.lives_addr = StateReader._read_offsets(self.process, lives_base_addr, lives_offsets)
 
-        rotation_base_addr = base_address + 0x00133DA0
-        rotation_offsets = [0x4, 0x4, 0x14, 0x34, 0x1FC, 0x4]
-        self.rotation_addr = StateReader._read_offsets(self.process, rotation_base_addr, rotation_offsets)
+        try:
+            # Possible address 1
+            rotation_base_addr = base_address + 0x00133DA0
+            rotation_offsets = [0x4, 0x4, 0x14, 0x34, 0x1FC, 0x4]
+            self.rotation_addr = StateReader._read_offsets(self.process, rotation_base_addr, rotation_offsets)
+            rotation = float(r_float(self.process, self.rotation_addr))
+            if rotation == 0:
+                raise Exception
+            self.reset_rotation()
+        except:
+            try:
+                # Possible address 2
+                rotation_base_addr = base_address + 0x00148078
+                rotation_offsets = [0xD0, 0x94, 0xC0, 0x38, 0xC0, 0x210, 0x4]
+                self.rotation_addr = StateReader._read_offsets(self.process, rotation_base_addr, rotation_offsets)
+                rotation = float(r_float(self.process, self.rotation_addr))
+                if rotation == 0:
+                    raise Exception
+            except:
+                # Possible address 2
+                rotation_base_addr = base_address + 0x00132F90
+                rotation_offsets = [0xA0, 0x544, 0x8, 0x84, 0x4, 0x268, 0x4]
+                self.rotation_addr = StateReader._read_offsets(self.process, rotation_base_addr, rotation_offsets)
+                rotation = float(r_float(self.process, self.rotation_addr))
 
         focus_loss_base_addr = base_address + 0x0017FF54
         focus_loss_offsets = [0x58, 0xC8, 0x8, 0x5C, 0x48, 0xCC]
@@ -113,8 +134,7 @@ class StateReader:
         self.score = int(r_int(self.process, self.score_addr))
         self.progress = int(r_int(self.process, self.progress_addr))
         self.lives = int(r_int(self.process, self.lives_addr))
-        # TODO
-        # self.rotation = float(r_float(self.process, self.rotation_addr))
+        self.rotation = float(r_float(self.process, self.rotation_addr))
 
     def write_game_values(self):
         w_int(self.process, self.score_addr, self.score)
@@ -210,17 +230,18 @@ class StateReader:
         img = Image.frombuffer(
             'RGB',
             (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
-            bmpstr, 'raw', 'BGRX', 0, 1
+            bmpstr,
+            'raw', 'BGRX', 0, 1
         )
         img = img.crop((15, 30, bmpinfo['bmWidth']-15, bmpinfo['bmHeight']-15))
-
+        # img = img.convert("BGR")
         # img = StateReader.transform_image_to_2bit_rgb(img)
 
         # transformed_image = StateReader.transform_image_to_2bit_rgb(img)
 
         win32gui.DeleteObject(bmp.GetHandle())
 
-        img = img.resize((40, 40))
+        # img = transformed_image.resize((160, 160))
 
         return img
 
@@ -238,9 +259,9 @@ class StateReader:
         # Combine the channels back into an image
         transformed_array = np.stack((r_2bit, g_2bit, b_2bit), axis=-1)
         transformed_image = Image.fromarray(transformed_array.astype('uint8'), mode="RGB")
-        resized_image = transformed_image.resize((84, 84))
+        # resized_image = transformed_image.resize((84, 84))
 
-        return resized_image
+        return transformed_image
 
     # def __del__(self):
         # win32gui.ReleaseDC(self.hwnd, self.hwindc)
